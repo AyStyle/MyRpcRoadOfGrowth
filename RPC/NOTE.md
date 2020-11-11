@@ -216,3 +216,67 @@ CanCommit、PreCommit和DoCommit三个阶段组成的事务处理协议。
        2. 如果没有提案被提出，就不应该有被选定的提案
        3. 当一个提案被选定后，那么所有进程都应该能学习到这个被选定的value
    ```
+   
+3. Paxos算法的规定
+   1. 一个Acceptor必须接受它收到的第一个提案
+   2. 一个提案被选定必须被半数以上的Acceptor接受
+   3. 如果某个value为v的提案被选定了，那么每个编号更高的被选定的提案value必须也是v
+   4. 如果某个value为v的提案被选定了，那么每个编号更高的被Acceptor接受的提案value必须也是v
+   5. 如果某个value为v的提案被选定了，那么之后任何Proposer提出的编号更高的提案value必须也是v
+   6. 对于任意的Mn和Vn，如果提案[Mn,Vn]被提出，那么肯定存在一个由半数以上的Acceptor组成的集合S，满足以下两个条件的任意一个：
+      + S中每个Acceptor都没有接受过编号小于Mn的提案（少见）
+      + S中每个Acceptor批准的所有编号小于Mn的提案中，编号最大的那个提案的value为Vn
+      
+4. Paxos算法提案生成的规则
+   + Proposer生成提案:
+       ```text
+       1. Proposer选择一个新的提案编号N，然后向某个Acceptor集合（半数以上）发送请求，要求该
+          集合中的每个Acceptor做出如下响应（response）：
+          a. Acceptor向Proposer承诺保证不再接受任何小于N的提案。
+          b. 如果Acceptor已经接受过提案，那么就向Proposer反馈已经接受过的编号小于N的，
+             但为最大编号的提案的值。
+     
+       2. 如果Proposer收到了半数以上的Acceptor响应，那么它就可以生成编号为N，Value为V的提案[N,V]。
+          这里的V是所有响应中编号最大的提案的Value。如果所有响应都没有提案，那么此时V就可以由Proposer
+          自己选择。生成提案后，Proposer将该提案发送给半数以上的Acceptor集合，并期望Acceptor能够接受该提案。
+       
+       注：1称之为编号为N的Prepare请求，2称之为Accept请求。     
+       ```
+     
+   + Acceptor接受提案：
+      ```text
+      1. Prepare请求：Acceptor可以在任何时候响应一个Prepare请求
+      2. Accept请求： 在不违背Accept现有承若的前提下，可以任意响应Accept请求
+     
+      约束：
+         一个Acceptor只要尚未响应过任何编号大于N的Prepare请求，那么它就可以接受这个编号为N的提案
+      ```
+5. Learn学习被选定的value
+   1. 方案一：
+      ```text
+      Acceptor接受一个提案，就将该提案发送给所有Learner。
+      
+      优点：Learner能快速获取被选定的value
+      缺点：通信次数为M*N
+      ```     
+   2. 方案二：
+      ```text
+      Acceptor接受了一个提案，就将该提案发送给主Learner，主Learner再通知其他Learner
+      
+      优点：通信次数少M+N-1
+      缺点：单点问题，主Learner挂了，则无法同步提案
+      ```
+      
+   3. 方案三：
+      ```text
+      Acceptor接受一个提案，就将该提案发送给一个Learner集合，Learner集合再通知其他Learner
+      
+      优点：集合中Learner个数越多，可靠性越好
+      缺点：网络通信复杂度高
+      ```
+      
+6. 保证Paxos算法活性
+   ```text
+   活性：最终一定会发生的事情，最终一定要选定value
+   方案：选取一个住Proposer，只有主Proposer才能提出提案
+   ```
