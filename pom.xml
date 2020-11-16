@@ -9,7 +9,10 @@
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
     <modules>
-        <module>RPC</module>
+        <module>RMI-Client</module>
+        <module>RMI-Server</module>
+        <module>Netty</module>
+        <module>MyRpc</module>
     </modules>
 
 

@@ -6,8 +6,16 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="RPC" />
+        <module name="rpc-consumer" />
+        <module name="RMI-Server" />
+        <module name="RMI-Client" />
+        <module name="Netty" />
+        <module name="rpc-provider" />
+        <module name="rpc-common" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="RPC" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>
