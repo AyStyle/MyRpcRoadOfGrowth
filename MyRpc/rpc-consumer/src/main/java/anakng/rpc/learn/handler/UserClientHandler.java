@@ -1,5 +1,6 @@
 package anakng.rpc.learn.handler;
 
+import ankang.rpc.learn.RpcRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
@@ -20,7 +21,7 @@ public class UserClientHandler extends ChannelInboundHandlerAdapter implements C
     private String result;
 
     // 记录将要发送给服务器的数据
-    private String param;
+    private Object param;
 
     // 2. 实现ChannelActivate    客户端和服务器连接时，该方法自动执行
     @Override
@@ -33,8 +34,23 @@ public class UserClientHandler extends ChannelInboundHandlerAdapter implements C
     // 3. 实现ChannelRead    当读到服务器数据时，该方法自动执行
     @Override
     public synchronized void channelRead(ChannelHandlerContext ctx , Object msg) throws Exception {
-        // 将读到的服务器数据msg，设置为成员变量的值
+        v2(ctx , msg);
+    }
+
+    /**
+     * 学习版
+     *
+     * @param ctx
+     * @param msg
+     */
+    private void v1(ChannelHandlerContext ctx , Object msg) {
         result = msg.toString();
+        notify();
+    }
+
+    private void v2(ChannelHandlerContext ctx , Object msg) {
+        // 将读到的服务器数据msg，设置为成员变量的值
+        result = ((RpcRequest) msg).getRequest();
         notify();
     }
 
@@ -49,7 +65,7 @@ public class UserClientHandler extends ChannelInboundHandlerAdapter implements C
     }
 
     // 5. 设置参数
-    public void setParam(String param) {
+    public void setParam(Object param) {
         this.param = param;
     }
 

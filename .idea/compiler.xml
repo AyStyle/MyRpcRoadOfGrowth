@@ -15,6 +15,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="homework" target="11" />
       <module name="RPC" target="1.8" />
     </bytecodeTargetLevel>
   </component>

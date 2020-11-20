@@ -1,12 +1,14 @@
 package anakng.rpc.learn.client;
 
 import anakng.rpc.learn.handler.UserClientHandler;
+import ankang.rpc.learn.RpcRequest;
+import ankang.rpc.learn.decoder.JsonDecoder;
+import ankang.rpc.learn.encoder.JsonEncoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -14,8 +16,11 @@ import io.netty.handler.codec.string.StringEncoder;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author: ankang
@@ -32,6 +37,13 @@ public class RPCConsumer {
 
     // 3. 初始化客户端（创建连接池、Bootstrap 设置bootstrap 连接服务器）
     public static void initClient() throws InterruptedException {
+        initClientV2();
+    }
+
+    /**
+     * 学习版
+     */
+    private static void initClientV1() throws InterruptedException {
         // 1. 初始化UserClientHandler
         userClientHandler = new UserClientHandler();
 
@@ -61,11 +73,51 @@ public class RPCConsumer {
         bootstrap.connect("localhost" , 9999).sync();
     }
 
+    /**
+     * 作业版
+     */
+    private static void initClientV2() throws InterruptedException {
+        // 1. 初始化UserClientHandler
+        userClientHandler = new UserClientHandler();
 
-    // 4. 使用JDK的动态代理创建对象
-    // serviceClass 接口类型，根据哪个接口生成子类代理对象
-    // providerParam UserService#sayHello#
-    public static Object createProxy(Class<?> serviceClass , String providerParam) {
+        // 2. 创建连接池对象
+        final NioEventLoopGroup group = new NioEventLoopGroup();
+
+        // 3. 创建客户端的引导对象
+        final Bootstrap bootstrap = new Bootstrap();
+
+        // 4. 配置启动引导对象
+        bootstrap.group(group)
+                // 设置通道为Nio
+                .channel(NioSocketChannel.class)
+                // 设置请求协议为TCP
+                .option(ChannelOption.TCP_NODELAY , true)
+                // 监听channel并初始化
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        ch.pipeline().addLast(new JsonEncoder())
+                                .addLast(new JsonDecoder())
+                                .addLast(userClientHandler);
+                    }
+                });
+
+        // 5. 连接服务器
+        bootstrap.connect("localhost" , 9999).sync();
+    }
+
+
+    /**
+     * 学习版
+     * 4. 使用JDK的动态代理创建对象
+     * serviceClass 接口类型，根据哪个接口生成子类代理对象
+     * providerParam UserService#sayHello#
+     *
+     * @param serviceClass
+     * @param providerParam
+     * @return
+     */
+    public static Object createProxyV1(Class<?> serviceClass , String providerParam) {
         return Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader() , new Class[] {serviceClass} , new InvocationHandler() {
             @Override
             public Object invoke(Object proxy , Method method , Object[] args) throws Throwable {
@@ -76,6 +128,29 @@ public class RPCConsumer {
 
                 // 2. 给UserClientHandler设置Param参数
                 userClientHandler.setParam(providerParam + args[0]);
+
+                // 3. 使用线程池，开启一个线程处理call()写操作，并返回结果
+                final Object result = pool.submit(userClientHandler).get();
+
+                // 4. 返回结果
+                return result;
+            }
+        });
+    }
+
+    public static Object createProxyV2(RpcRequest rpcRequest) throws ClassNotFoundException {
+        return Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader() , new Class[] {Class.forName(rpcRequest.getCls())} , new InvocationHandler() {
+            @Override
+            public Object invoke(Object proxy , Method method , Object[] args) throws Throwable {
+                // 1. 初始化客户端
+                if (userClientHandler == null) {
+                    initClient();
+                }
+
+                // 2. 给UserClientHandler设置Param参数
+                final String[] param = Stream.of(args).map(Object::toString).collect(Collectors.toList()).toArray(new String[0]);
+                rpcRequest.setParam(param);
+                userClientHandler.setParam(rpcRequest);
 
                 // 3. 使用线程池，开启一个线程处理call()写操作，并返回结果
                 final Object result = pool.submit(userClientHandler).get();

@@ -1,6 +1,6 @@
 package ankang.rpc.learn.encoder;
 
-import ankang.rpc.learn.pojo.User;
+import ankang.rpc.learn.RpcRequest;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.netty.buffer.ByteBuf;
@@ -12,8 +12,8 @@ import io.netty.handler.codec.MessageToByteEncoder;
  * @email: dreedisgood@qq.com
  * @create: 2020-11-19
  */
-public class JsonEncoder extends MessageToByteEncoder<User> {
-    protected void encode(ChannelHandlerContext channelHandlerContext , User user , ByteBuf byteBuf) throws Exception {
+public class JsonEncoder extends MessageToByteEncoder<RpcRequest> {
+    protected void encode(ChannelHandlerContext channelHandlerContext , RpcRequest user , ByteBuf byteBuf) throws Exception {
         final byte[] bytes = JSON.toJSONBytes(user , SerializerFeature.IgnoreNonFieldGetter);
 
         byteBuf.writeInt(bytes.length);
